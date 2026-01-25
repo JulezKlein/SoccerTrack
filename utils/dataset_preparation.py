@@ -8,7 +8,8 @@ from PIL import Image
 def extract_frames_from_videos(
     video_root: str = "/content/soccertrack/top_view/videos",
     output_root: str = "/content/data_prep/soccertrack_frames",
-    img_ext: str = ".jpg"
+    img_ext: str = ".jpg",
+    frame_stride: int = 5,
 ):
     """
     Extract frames from all MP4 videos in video_root.
@@ -33,6 +34,10 @@ def extract_frames_from_videos(
         frame_id = 1
 
         for _ in tqdm(range(total), desc=f"Extracting {name}"):
+            if frame_id % frame_stride != 0:
+                frame_id += 1
+                continue
+
             ret, frame = cap.read()
             if not ret:
                 break
@@ -49,7 +54,8 @@ def convert_soccertrack_csvs_to_coco(
     annotation_root: str ="/content/soccertrack/top_view/annotations",
     image_root: str ="/content/data_prep/soccertrack_frames",
     output_root: str ="/content/data_prep/soccertrack_coco",
-    train_split: float = 0.8
+    train_split: float = 0.8,
+    frame_stride: int = 5,
 ):
     """
     Convert SoccerTrack CSV annotations (per video) to COCO detection format.
@@ -59,6 +65,7 @@ def convert_soccertrack_csvs_to_coco(
         image_root (str): extracted frames root (one folder per video)
         output_root (str): output COCO folder
         train_split (float): fraction of videos for training
+        frame_stride (int): keep every n-th frame (e.g. 5 → every 5th frame)
     """
     os.makedirs(f"{output_root}/images/train", exist_ok=True)
     os.makedirs(f"{output_root}/images/val", exist_ok=True)
@@ -101,6 +108,11 @@ def convert_soccertrack_csvs_to_coco(
 
         for _, row in tqdm(data.iterrows(), total=len(data), desc=f"COCO {video_name}"):
             frame = int(row["frame"])
+
+            # SKIP frames based on stride
+            if frame_stride > 1 and frame % frame_stride != 0:
+                continue
+
             frame_img = os.path.join(img_dir, f"{frame:06d}.jpg")
             if not os.path.exists(frame_img):
                 continue
