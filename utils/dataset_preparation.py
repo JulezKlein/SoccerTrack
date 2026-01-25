@@ -95,6 +95,10 @@ def convert_soccertrack_csvs_to_coco(
         data = df.iloc[3:].reset_index(drop=True)
         data.rename(columns={0: "frame"}, inplace=True)
 
+        # Ensure 'frame' is numeric; skip invalid rows
+        data = data[pd.to_numeric(data["frame"], errors='coerce').notnull()]
+        data["frame"] = data["frame"].astype(int)
+
         # group bbox columns by player (ignore BALL)
         players = {}
         for col in df.columns[1:]:
