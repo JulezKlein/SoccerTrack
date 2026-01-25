@@ -57,16 +57,7 @@ def convert_soccertrack_csvs_to_coco(
     train_split: float = 0.8,
     frame_stride: int = 5,
 ):
-    """
-    Convert SoccerTrack CSV annotations (per video) to COCO detection format.
 
-    Args:
-        annotation_root (str): folder with *.csv files
-        image_root (str): extracted frames root (one folder per video)
-        output_root (str): output COCO folder
-        train_split (float): fraction of videos for training
-        frame_stride (int): keep every n-th frame (e.g. 5 → every 5th frame)
-    """
     os.makedirs(f"{output_root}/images/train", exist_ok=True)
     os.makedirs(f"{output_root}/images/val", exist_ok=True)
     os.makedirs(f"{output_root}/annotations", exist_ok=True)
@@ -95,11 +86,11 @@ def convert_soccertrack_csvs_to_coco(
         data = df.iloc[3:].reset_index(drop=True)
         data.rename(columns={0: "frame"}, inplace=True)
 
-        # Ensure 'frame' is numeric; skip invalid rows
+        # Keep only numeric frames
         data = data[pd.to_numeric(data["frame"], errors='coerce').notnull()]
         data["frame"] = data["frame"].astype(int)
 
-        # group bbox columns by player (ignore BALL)
+        # Group bbox columns per player (ignore BALL)
         players = {}
         for col in df.columns[1:]:
             pid = player_ids[col]
@@ -111,19 +102,17 @@ def convert_soccertrack_csvs_to_coco(
         img_dir = os.path.join(image_root, video_name)
 
         for _, row in tqdm(data.iterrows(), total=len(data), desc=f"COCO {video_name}"):
-            frame = int(row["frame"])
-
-            # SKIP frames based on stride
-            if frame_stride > 1 and frame % frame_stride != 0:
+            frame_num = int(row["frame"])
+            # Skip frames based on stride
+            if frame_stride > 1 and frame_num % frame_stride != 0:
                 continue
 
-            frame_img = os.path.join(img_dir, f"{frame:06d}.jpg")
+            frame_img = os.path.join(img_dir, f"{frame_num:06d}.jpg")
             if not os.path.exists(frame_img):
                 continue
 
-            coco_img_name = f"{video_name}_{frame:06d}.jpg"
+            coco_img_name = f"{video_name}_{frame_num:06d}.jpg"
             dst_img = os.path.join(output_root, "images", split, coco_img_name)
-
             if not os.path.exists(dst_img):
                 Image.open(frame_img).save(dst_img)
 
@@ -133,12 +122,18 @@ def convert_soccertrack_csvs_to_coco(
                 "id": img_id,
                 "file_name": coco_img_name,
                 "width": w_img,
-                "height": h_img
+                "height": h_img,
+                "video_name": video_name,  # store for train/val split
             })
 
-            for _, cols in players.items():
-                vals = {attrs[c]: row[c] for c in cols}
-                if pd.isna(vals["bb_width"]) or pd.isna(vals["bb_height"]):
+            for pid, cols in players.items():
+                # Extract bbox values
+                try:
+                    vals = {attrs[c]: row[c] for c in cols}
+                except KeyError:
+                    continue
+
+                if pd.isna(vals.get("bb_width")) or pd.isna(vals.get("bb_height")):
                     continue
 
                 x, y, w, h = map(float, [
@@ -147,7 +142,6 @@ def convert_soccertrack_csvs_to_coco(
                     vals["bb_width"],
                     vals["bb_height"]
                 ])
-
                 if w <= 1 or h <= 1:
                     continue
 
@@ -163,20 +157,20 @@ def convert_soccertrack_csvs_to_coco(
 
             img_id += 1
 
-    train_img_ids = {
-        img["id"] for img in images
-        if img["file_name"].split("_")[0] + ".csv" in train_csvs
-    }
-
+    # Split train/val based on video_name stored in image
     train = {
-        "images": [i for i in images if i["id"] in train_img_ids],
-        "annotations": [a for a in annotations if a["image_id"] in train_img_ids],
+        "images": [i for i in images if i["video_name"] + ".csv" in train_csvs],
+        "annotations": [a for a in annotations if any(
+            img["id"] == a["image_id"] and img["video_name"] + ".csv" in train_csvs for img in images
+        )],
         "categories": categories
     }
 
     val = {
-        "images": [i for i in images if i["id"] not in train_img_ids],
-        "annotations": [a for a in annotations if a["image_id"] not in train_img_ids],
+        "images": [i for i in images if i["video_name"] + ".csv" not in train_csvs],
+        "annotations": [a for a in annotations if any(
+            img["id"] == a["image_id"] and img["video_name"] + ".csv" not in train_csvs for img in images
+        )],
         "categories": categories
     }
 
