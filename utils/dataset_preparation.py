@@ -108,8 +108,14 @@ def convert_soccertrack_csvs_to_coco(
             team = team_ids[col]
             pid = player_ids[col]
             attr = attrs[col]
+            # --- Skip BALL or invalid IDs ---
+            if pd.isna(team) or pd.isna(pid):
+                continue
 
-            if pd.isna(pid) or pd.isna(attr):
+            if isinstance(pid, str) and pid.upper() == "BALL":
+                continue
+
+            if not str(team).isdigit() or not str(pid).isdigit():
                 continue
 
             if attr not in {"bb_left", "bb_top", "bb_width", "bb_height"}:
@@ -207,4 +213,5 @@ def convert_soccertrack_csvs_to_coco(
 
 if __name__ == '__main__':
     convert_soccertrack_csvs_to_coco(annotation_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
+                                     image_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
                                      output_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack")
