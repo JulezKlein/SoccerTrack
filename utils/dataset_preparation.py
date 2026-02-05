@@ -4,6 +4,53 @@ from tqdm import tqdm
 import json
 import pandas as pd
 from PIL import Image
+from pathlib import Path
+
+
+def downsize_images(image_dir: str, scale_factor: float = 0.5):
+    """
+    Downsize all images in a directory by a given scale factor and overwrite them.
+    
+    Args:
+        image_dir (str): Path to directory containing images
+        scale_factor (float): Scale factor (0.5 = 50% of original size). Default: 0.5
+    
+    Example:
+        downsize_images("./data/soccertrack_prep_top_view/coco/images", scale_factor=0.5)
+    """
+    image_dir = Path(image_dir)
+    if not image_dir.exists():
+        print(f"Directory not found: {image_dir}")
+        return
+    
+    # Find all image files
+    image_files = list(image_dir.glob("**/*.jpg")) + list(image_dir.glob("**/*.jpeg")) + list(image_dir.glob("**/*.png"))
+    
+    if not image_files:
+        print(f"No images found in {image_dir}")
+        return
+    
+    print(f"Downsizing {len(image_files)} images to {scale_factor*100:.0f}% of original size...")
+    
+    for img_path in tqdm(image_files, desc="Downsizing images"):
+        try:
+            # Open image
+            img = Image.open(img_path)
+            
+            # Calculate new dimensions
+            new_width = int(img.width * scale_factor)
+            new_height = int(img.height * scale_factor)
+            
+            # Resize using high-quality resampling
+            img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Overwrite original
+            img_resized.save(img_path, quality=95)
+            
+        except Exception as e:
+            print(f"Error processing {img_path}: {e}")
+    
+    print("Image downsizing complete")
 
 
 def extract_frames_from_videos(
@@ -244,9 +291,162 @@ def convert_soccertrack_csvs_to_coco(
     print(f"Images: {len(images)} | Annotations: {len(annotations)}")
 
 
+def coco_to_yolo_labels(coco_json_path: str, images_dir: str, labels_out_dir: str, class_mapping: dict = None, overwrite: bool = False):
+    """
+    Convert COCO-format annotations to YOLO (one .txt per image) labels.
 
+    Args:
+        coco_json_path: path to COCO json (train.json or val.json)
+        images_dir: directory containing corresponding images
+        labels_out_dir: directory where label .txt files will be written
+        class_mapping: optional dict mapping COCO category_id -> yolo class index (default maps in-order starting at 0)
+        overwrite: whether to overwrite existing label files (default False)
+    """
+    from pathlib import Path
+
+    coco_path = Path(coco_json_path)
+    images_dir = Path(images_dir)
+    labels_out_dir = Path(labels_out_dir)
+    labels_out_dir.mkdir(parents=True, exist_ok=True)
+
+    with open(coco_path, "r") as f:
+        coco = json.load(f)
+
+    # Build category id -> name and index map
+    cats = {c['id']: c['name'] for c in coco.get('categories', [])}
+    if class_mapping is None:
+        # default: map sorted category ids to 0..N-1
+        sorted_ids = sorted(cats.keys())
+        class_mapping = {cid: i for i, cid in enumerate(sorted_ids)}
+
+    # Map image id -> (file_name, width, height)
+    img_info = {img['id']: img for img in coco.get('images', [])}
+
+    # Group annotations by image_id
+    anns_by_image = {}
+    for ann in coco.get('annotations', []):
+        img_id = ann['image_id']
+        anns_by_image.setdefault(img_id, []).append(ann)
+
+    for img_id, info in img_info.items():
+        filename = info.get('file_name')
+        width = info.get('width')
+        height = info.get('height')
+        if not filename:
+            continue
+
+        img_path = images_dir / filename
+        if not img_path.exists():
+            # try plain filename without prefix
+            # skip if missing
+            print(f"⚠️  Image missing: {img_path} — skipping label creation")
+            continue
+
+        label_lines = []
+        for ann in anns_by_image.get(img_id, []):
+            bbox = ann.get('bbox')  # [x,y,w,h] absolute
+            cat_id = ann.get('category_id')
+            if bbox is None or cat_id is None:
+                continue
+
+            x, y, w, h = bbox
+            # convert to YOLO xc yc w h (normalized)
+            xc = (x + w / 2.0) / width
+            yc = (y + h / 2.0) / height
+            nw = w / width
+            nh = h / height
+
+            cls_ix = class_mapping.get(cat_id, 0)
+            label_lines.append(f"{cls_ix} {xc:.6f} {yc:.6f} {nw:.6f} {nh:.6f}")
+
+        # Write label file (skip if exists and overwrite=False)
+        out_label = labels_out_dir / (Path(filename).stem + ".txt")
+        if out_label.exists() and not overwrite:
+            continue
+        with open(out_label, "w") as lf:
+            lf.write("\n".join(label_lines))
+
+    print(f"✓ Converted COCO -> YOLO labels: {coco_json_path} -> {labels_out_dir}")
+
+
+def build_yolo_annotations(prep_root: str = "./data/soccertrack_prep_top_view", coco_subdir: str = "coco", overwrite: bool = False):
+    """
+    Create YOLO-style label files in the COCO folder (alongside images).
+
+    Writes `labels/train` and `labels/val` label files derived from existing COCO annotations,
+    and creates a `dataset.yaml` in the coco root.
+
+    This does NOT modify existing COCO annotations; it only adds label `.txt` files and a `dataset.yaml`.
+
+    Args:
+        prep_root: path to the prep folder that contains the `coco` folder
+        coco_subdir: name of the coco folder under `prep_root` (default 'coco')
+        overwrite: whether to overwrite existing label files in the target folder
+    """
+    from pathlib import Path
+
+    prep_root = Path(prep_root)
+    coco_root = prep_root / coco_subdir
+    if not coco_root.exists():
+        raise FileNotFoundError(f"COCO root not found: {coco_root}")
+
+    images_train = coco_root / "images" / "train"
+    images_val = coco_root / "images" / "val"
+    ann_train = coco_root / "annotations" / "train.json"
+    ann_val = coco_root / "annotations" / "val.json"
+
+    # Write labels into coco/labels/ (where YOLO expects them)
+    labels_train = coco_root / "labels" / "train"
+    labels_val = coco_root / "labels" / "val"
+    labels_train.mkdir(parents=True, exist_ok=True)
+    labels_val.mkdir(parents=True, exist_ok=True)
+
+    # Convert both splits
+    if ann_train.exists():
+        coco_to_yolo_labels(str(ann_train), str(images_train), str(labels_train), overwrite=overwrite)
+    else:
+        print(f"⚠️  COCO train json missing: {ann_train}")
+
+    if ann_val.exists():
+        coco_to_yolo_labels(str(ann_val), str(images_val), str(labels_val), overwrite=overwrite)
+    else:
+        print(f"⚠️  COCO val json missing: {ann_val}")
+
+    # Create dataset.yaml in coco root
+    abs_coco = os.path.abspath(str(coco_root))
+    
+    # Build names mapping
+    if ann_train.exists():
+        cats = json.load(open(ann_train))['categories']
+    elif ann_val.exists():
+        cats = json.load(open(ann_val))['categories']
+    else:
+        cats = [{"id": 1, "name": "player"}]
+    
+    # Map sorted category ids to 0..N-1
+    sorted_cats = sorted(cats, key=lambda c: c['id'])
+    num_classes = len(sorted_cats)
+    
+    # Build yaml content
+    yaml_content = f"""path: {abs_coco}
+train: images/train
+val: images/val
+nc: {num_classes}
+names:
+"""
+    for i, c in enumerate(sorted_cats):
+        yaml_content += f"  {i}: {c['name']}\n"
+    
+    yaml_path = coco_root / "dataset.yaml"
+    with open(yaml_path, "w") as yf:
+        yf.write(yaml_content)
+    
+    print(f"✓ YOLO labels written to: {coco_root / 'labels'}")
+    print(f"✓ Dataset YAML created at: {yaml_path}")
 
 if __name__ == '__main__':
-    convert_soccertrack_csvs_to_coco(annotation_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
-                                     image_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
-                                     output_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack")
+    # Example: convert SoccerTrack CSVs to COCO format
+    convert_soccertrack_csvs_to_coco(
+        annotation_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
+        image_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
+        output_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack")

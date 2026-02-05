@@ -221,11 +221,11 @@ val_dataloader:
 
   collate_fn:
     type: BatchImageCollateFunction
-    scales: [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
+    scales: [640, 640]
     stop_epoch: 30
 
   shuffle: True
-  total_batch_size: 4
+  total_batch_size: 2
   num_workers: 0
 
 val_dataloader:
@@ -235,7 +235,7 @@ val_dataloader:
         - {type: Resize, size: [640, 640]}
         - {type: ConvertPILImage, dtype: 'float32', scale: True}
   shuffle: False
-  total_batch_size: 8
+  total_batch_size: 2
   num_workers: 0
 """
     
@@ -357,6 +357,8 @@ def main():
     parser.add_argument("--skip-setup", action="store_true", help="Skip environment setup")
     parser.add_argument("--skip-data-prep", action="store_true", help="Skip dataset preparation")
     parser.add_argument("--visualize", action="store_true", help="Visualize sample from dataset")
+    parser.add_argument("--downsize", action="store_true", help="Downsize all images in prep folder to 50% scale")
+    parser.add_argument("--downsize-scale", type=float, default=0.5, help="Scale factor for downsizing (0.0-1.0)")
     
     args = parser.parse_args()
     
@@ -371,6 +373,14 @@ def main():
     if not args.skip_data_prep:
         unzip_dataset()
         prepare_dataset()
+    
+    if args.downsize:
+        sys.path.insert(0, os.path.join(os.getcwd(), "utils"))
+        from utils.dataset_preparation import downsize_images
+        
+        image_dir = os.path.join(PREP_DIR, "coco", "images")
+        print(f"\nDownsizing images to {args.downsize_scale*100:.0f}% scale...")
+        downsize_images(image_dir, scale_factor=args.downsize_scale)
     
     if args.visualize:
         visualize_sample()

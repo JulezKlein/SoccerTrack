@@ -209,6 +209,15 @@ __marimo__/
 .idea
 *.csv
 
-data/* 
-output/*
-RT-DETR
+data/
+output/
+RT-DETR/
+
+# Ignore all .yaml files
+*.yaml
+
+# Ignore yolo model weights
+*.pt
+
+# Ignore yolo runs
+runs/
