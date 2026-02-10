@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Training script for SoccerTrack detection model using YOLOv8s on macOS.
+Training script for player detection models (YOLO / RT-DETR).
 Data should be stored under ./data directory.
 """
 
@@ -18,7 +18,7 @@ DATASET_CONFIGS = {
         "dataset_zip": "./data/soccertrack.zip",
         "dataset_dir": "./data/soccertrack",
         "prep_dir": "./data/soccertrack_prep_top_view",
-        "output_dir": "./output_yolo",
+        "output_dir": "./output_yolo_soccertrack",
         "requires_preparation": True,
         "yaml_path": None,  # Will be set to prep_dir/yolo/dataset.yaml
     },
@@ -77,7 +77,7 @@ def configure_dataset(dataset_type: str = "football", view_type: str = "top_view
 
 
 def install_dependencies():
-    """Install YOLO dependencies."""
+    """Install detection dependencies (YOLO backend by default)."""
     print("\nInstalling dependencies...")
     subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip", "-q"], check=True)
     
@@ -114,7 +114,7 @@ def unzip_dataset():
 
 
 def prepare_dataset():
-    """Prepare YOLO dataset by extracting frames and converting to YOLO format."""
+    """Prepare dataset by extracting frames and converting to YOLO format."""
     sys.path.insert(0, os.path.join(os.getcwd(), "utils"))
     
     from utils.dataset_preparation import (
@@ -157,13 +157,13 @@ def prepare_dataset():
             train_split=train_split,
             frame_stride=frame_stride
         )
-        print("✓ YOLO format conversion complete.")
+        print("✓ Conversion to YOLO format complete.")
     else:
-        print("✓ YOLO dataset already prepared.")
+        print("✓ Dataset already prepared.")
 
 
 def validate_dataset():
-    """Validate YOLO dataset format for the configured dataset."""
+    """Validate dataset format for the configured dataset."""
     sys.path.insert(0, os.path.join(os.getcwd(), "utils"))
     
     try:
@@ -173,7 +173,7 @@ def validate_dataset():
         return
     
     print("\n" + "="*60)
-    print("Validating YOLO dataset format...")
+    print("Validating dataset format...")
     print("="*60)
     
     if CONFIG["requires_preparation"]:
@@ -199,12 +199,12 @@ def validate_dataset():
     print("\n✓ Dataset validation complete!")
 
 
-def visualize_yolo_sample(image_path: str = None, label_path: str = None, class_names: list = None):
-    """Visualize a YOLO formatted image with bounding boxes.
-    
+def visualize_sample(image_path: str = None, label_path: str = None, class_names: list = None):
+    """Visualize a sample image (YOLO-format labels if available).
+
     Args:
         image_path (str, optional): path to the image file. If None, picks a random image from training set.
-        label_path (str, optional): path to the corresponding YOLO label file
+        label_path (str, optional): path to the corresponding label file
         class_names (list, optional): list of class names for labeling
     """
     sys.path.insert(0, os.path.join(os.getcwd(), "utils"))
@@ -245,52 +245,66 @@ def visualize_yolo_sample(image_path: str = None, label_path: str = None, class_
         print("Visualization module not available, skipping visualization")
 
 
-def make_yolo_annotations():
-    """Generate YOLO-format annotations for SoccerTrack dataset."""
+def make_annotations():
+    """Generate YOLO-format annotations for SoccerTrack dataset (if applicable)."""
     if not CONFIG["requires_preparation"]:
-        print("ERROR: Annotation conversion is only available for the SoccerTrack dataset.")
-        print("The football dataset is already in YOLO format.")
+        print("INFO: Annotation conversion is only available for the SoccerTrack dataset.")
+        print("The football dataset is already in YOLO/COCO format.")
         return
-    
+
     sys.path.insert(0, os.path.join(os.getcwd(), "utils"))
-    
+
     try:
         from utils.dataset_preparation import build_yolo_annotations
     except ImportError:
         print("Annotation building module not available")
         return
-    
+
     print("\n" + "="*60)
     print("Generating YOLO-format annotations for SoccerTrack...")
     print("="*60)
-    
+
     build_yolo_annotations(prep_root=CONFIG["prep_dir"])
-    print("✓ YOLO annotations generated!")
+    print("✓ Annotations generated!")
 
 
 def start_training(epochs: int = 50, img_size: int = 640, model_name: str = "yolov8s"):
     """Start the YOLO training process."""
+
+    # Load pretrained model
+    model_path = f"{model_name}.pt"
+
     try:
-        from ultralytics import YOLO
+        if model_name.startswith("yolo"):
+            from ultralytics import YOLO
+            model = YOLO(model_path)
+        elif model_name.startswith("rtdetr"):
+            from ultralytics import RTDETR
+            model = RTDETR(model_path)
+        else:
+            raise ValueError(f"Unsupported model type for finetuning: {model_name}")
     except ImportError:
         print("ERROR: ultralytics not installed. Installing now...")
         subprocess.run([sys.executable, "-m", "pip", "install", "ultralytics", "-q"], check=True)
-        from ultralytics import YOLO
-    
+        if model_name.startswith("yolo"):
+            from ultralytics import YOLO
+            model = YOLO(model_path)
+        elif model_name.startswith("rtdetr"):
+            from ultralytics import RTDETR
+            model = RTDETR(model_path)
+        else:
+            raise ValueError(f"Unsupported model type for finetuning: {model_name}")
+
     print("\n" + "="*60)
     print(f"Starting {model_name.upper()} training...")
     print("="*60)
-    
-    # Load pretrained model
-    model_path = f"{model_name}.pt"
-    model = YOLO(model_path)
-    
+
     # Determine device
     device = 0 if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
-    
+
     # Get yaml path
-    yaml_path = CONFIG["yaml_path"]
-    
+    yaml_path = CONFIG.get("yaml_path")
+
     # Train the model
     results = model.train(
         data=yaml_path,
@@ -311,41 +325,51 @@ def start_training(epochs: int = 50, img_size: int = 640, model_name: str = "yol
         cutmix=0.0,
         amp=False,
         max_det=25,
-        deterministic=False,
-        iou = 0.6
+        deterministic=False
     )
-    
+
     print("\n✅ Training complete!")
-    print(f"Results saved to: {CONFIG['output_dir']}/soccertrack_{model_name}")
-    
+    print(f"Results saved to: {CONFIG['output_dir']}/{model_name}")
+
     return results
 
-def resume_training(ckpt_path: str):
-    """Resume YOLO training from a checkpoint."""
+def resume_training(ckpt_path: str, model_name: str = "yolov8s"):
+    """Resume training from a checkpoint."""
+    if ckpt_path is None:
+        raise ValueError("Checkpoint path must be provided to resume training.")
+
     try:
-        from ultralytics import YOLO
+        if model_name.startswith("yolo"):
+            from ultralytics import YOLO
+            model = YOLO(ckpt_path)
+        elif model_name.startswith("rtdetr"):
+            from ultralytics import RTDETR
+            model = RTDETR(ckpt_path)
+        else:
+            raise ValueError(f"Unsupported model type for resuming: {model_name}")
     except ImportError:
         print("ERROR: ultralytics not installed. Installing now...")
         subprocess.run([sys.executable, "-m", "pip", "install", "ultralytics", "-q"], check=True)
-        from ultralytics import YOLO
-    
+        if model_name.startswith("yolo"):
+            from ultralytics import YOLO
+            model = YOLO(ckpt_path)
+        elif model_name.startswith("rtdetr"):
+            from ultralytics import RTDETR
+            model = RTDETR(ckpt_path)
+        else:
+            raise ValueError(f"Unsupported model type for resuming: {model_name}")
+
     print("\n" + "="*60)
     print(f"Resuming training from checkpoint: {ckpt_path}")
     print("="*60)
-    
-    # Load model from checkpoint
-    model = YOLO(ckpt_path)
-    
-    # Resume training
-    results = model.train(
-        resume=True
-    )
-    
-    print("\n✅ Training resumed and complete!")    
+
+    results = model.train(resume=True)
+
+    print("\n✅ Training resumed and complete!")
     return results
 
 def main():
-    parser = argparse.ArgumentParser(description="Train object detection model with YOLO")
+    parser = argparse.ArgumentParser(description="Train object detection model (YOLO or RT-DETR)")
     parser.add_argument("--dataset", type=str, default="football", choices=["soccertrack", "football"], 
                         help="Dataset to use for training (default: football)")
     parser.add_argument("--view-type", type=str, default="top_view", choices=["top_view", "wide_view"],
@@ -353,10 +377,10 @@ def main():
     parser.add_argument("--skip-setup", action="store_true", help="Skip environment setup")
     parser.add_argument("--skip-data-prep", action="store_true", help="Skip dataset preparation")
     parser.add_argument("--visualize", action="store_true", help="Visualize sample from dataset")
-    parser.add_argument("--validate", action="store_true", help="Validate YOLO dataset format before training")
-    parser.add_argument("--make-yolo-annotations", action="store_true", help="Convert SoccerTrack annotations to YOLO format")
-    parser.add_argument("--model", type=str, default="yolov8s", choices=["yolov8s", "yolov8n", "yolo26n"], 
-                        help="YOLO model size (default: yolov8s)")
+    parser.add_argument("--validate", action="store_true", help="Validate dataset format before training")
+    parser.add_argument("--make-yolo-annotations", action="store_true", help="Convert SoccerTrack annotations to YOLO (labels + dataset.yaml)")
+    parser.add_argument("--model", type=str, default="yolov8s", choices=["yolov8s", "yolov8n", "yolo26n","rtdetr-l","rtdetr-x"], 
+                        help="Model type to train (YOLO or RT-DETR) (default: yolov8s)")
     parser.add_argument("--epochs", type=int, default=70, help="Number of training epochs")
     parser.add_argument("--img-size", type=int, default=640, help="Training image size")
     parser.add_argument("--resume", action="store_true", help="Resume Training from a checkpoint")
@@ -367,7 +391,7 @@ def main():
     # Configure dataset first
     configure_dataset(dataset_type=args.dataset, view_type=args.view_type)
     
-    print(f"\nYOLO Training Pipeline ({args.model.upper()})")
+    print(f"\nTraining Pipeline for ({args.model.upper()})")
     print("=" * 60)
     
     if not args.skip_setup:
@@ -380,11 +404,11 @@ def main():
             unzip_dataset()
             prepare_dataset()
     else:
-        print("\n✓ Dataset is already in YOLO format, skipping preparation.")
+        print("\n✓ Dataset is already in expected format, skipping preparation.")
     
-    # Generate YOLO annotations if requested (SoccerTrack only)
+    # Generate annotations if requested (SoccerTrack only)
     if args.make_yolo_annotations:
-        make_yolo_annotations()
+        make_annotations()
     
     # Validate dataset if requested
     if args.validate:
@@ -392,11 +416,11 @@ def main():
     
     # Visualize sample if requested
     if args.visualize:
-        visualize_yolo_sample()
+        visualize_sample()
     
     if args.resume and args.checkpoint:
         print(f"\nResuming training from checkpoint: {args.checkpoint}")
-        resume_training(ckpt_path=args.checkpoint)
+        resume_training(ckpt_path=args.checkpoint, model_name=args.model)
         
     else:
         start_training(epochs=args.epochs, img_size=args.img_size, model_name=args.model)

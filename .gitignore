@@ -221,3 +221,5 @@ RT-DETR/
 
 # Ignore yolo runs
 runs/
+
+.DS_Store
