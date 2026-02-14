@@ -222,4 +222,8 @@ RT-DETR/
 # Ignore yolo runs
 runs/
 
+# Ignore *.jpg and *.png files from training runs
+models/*.jpg
+models/*.png   
+
 .DS_Store
