@@ -226,4 +226,7 @@ runs/
 models/**/*.jpg
 models/**/*.png
 
+models/output_yolo_football/rtdetr-l/*
+models/output_yolo_football/yolo26n/*
+
 .DS_Store
