@@ -8,11 +8,11 @@ import time
 # ------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------
-WEIGHTS = "runs/detect/output_yolo_football/football_yolo26n/weights/best.pt"
+WEIGHTS = "models/output_yolo_football/yolov8s/weights/best.pt"  # path to your trained YOLO weights
 IMG_SIZE = 640
 EXPORT_FP16 = True        # set False if you want FP32
 DISABLE_NMS = False     # set True to disable NMS in exported model        
-EXPORT_FORMAT = "coreml"  # ONNX or Core ML supported in this script
+EXPORT_FORMAT = "both"  # ONNX or Core ML supported in this script
 
 CONF_THRESH = 0.4
 IOU_THRESH = 0.2
@@ -140,6 +140,11 @@ if __name__ == "__main__":
         export_coreml()
         quick_test_coreml()
     elif fmt == "onnx":
+        export_onnx()
+        quick_test_onnx()
+    elif fmt == "both":
+        export_coreml()
+        quick_test_coreml()
         export_onnx()
         quick_test_onnx()
     else:

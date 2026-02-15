@@ -48,13 +48,14 @@ def main():
     parser.add_argument("--model", type=str, required=False,
                         default="runs/detect/output_yolo_football/football_yolov8s/weights/best.onnx",
                         help="Path to exported model (.onnx or .mlpackage)")
-    parser.add_argument("--format", type=str, default="onnx", choices=["onnx", "coreml"],
+    parser.add_argument("--format", type=str, default="coreml", choices=["onnx", "coreml"],
                         help="Export format to test")
     parser.add_argument("--test-dir", type=str, default="data/football_player_detection/test/images",
                         help="Path to test images folder")
     parser.add_argument("--img-size", type=int, default=640)
     parser.add_argument("--save-dir", type=str, default="runs/detect/test_results")
     parser.add_argument("--visualize-index", type=int, default=0, help="Index of sample to visualize (0-based)")
+    parser.add_argument("--use-yolo", action="store_true", help="Use ultralytics YOLO class for inference (if available) instead of raw ONNXRuntime or CoreML.")
     args = parser.parse_args()
 
     os.makedirs(args.save_dir, exist_ok=True)
@@ -68,12 +69,8 @@ def main():
     visualized = False
 
     if args.format == "onnx":
-        # Prefer using ultralytics YOLO for easier postprocessing if available
-        try:
-            from ultralytics import YOLO
-            use_yolo = False
-        except Exception:
-            use_yolo = False
+        from ultralytics import YOLO
+        use_yolo = False
 
         if use_yolo:
             model = YOLO(args.model)
