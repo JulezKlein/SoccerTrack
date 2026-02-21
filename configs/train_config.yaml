@@ -10,7 +10,7 @@ paths:
     output_dir: ./output_yolo_soccertrack
   football:
     dataset_dir: ./data/football_player_detection
-    output_dir: ./output_yolo_football
+    output_dir: ./models/output_yolo_football
 
 training:
   model: yolov8s              # yolov8s, yolov8n, yolo26n, rtdetr-l, rtdetr-x
@@ -21,8 +21,8 @@ training:
   checkpoint: null
 
 augmentation:
-  rotation: 10.0
-  translation: 0.2
+  rotate: 10.0
+  translate: 0.2
   mosaic: 0.3
   scale: 0.5
   mixup: 0.0

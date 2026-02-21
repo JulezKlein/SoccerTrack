@@ -4,7 +4,7 @@
 # Model Configuration
 model:
   # Base model directory
-  base_path: models_without_rescaling_aug/output_yolo_football/yolov8s/weights
+  base_path: models/output_yolo_football/yolov8s/weights
   
   # Model paths in fallback order
   model_paths:
