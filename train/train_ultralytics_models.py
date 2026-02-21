@@ -318,11 +318,13 @@ def start_training(epochs: int = 50, img_size: int = 640, model_name: str = "yol
         save=True,
         verbose=True,
         augment=True,
-        mosaic=0.0,
-        scale=0.0,
+        rotation=10.0,   # Enable rotation by +/- 10 degrees
+        translation=0.2, # Enable translation by up to 20% of image size
+        mosaic=0.3,      # Enable mosaic augmentation with 30% probability
+        close_mosaic=epochs // 2,  # Disable mosaic in the last half of training
+        scale=0.5,       # Enable scaling by 0.5x to 1.5x
         mixup=0.0,
         auto_augment=None,
-        cutmix=0.0,
         amp=False,
         max_det=25,
         deterministic=False

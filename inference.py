@@ -335,7 +335,7 @@ class InferenceEngine:
         # Run CoreML inference
         try:
             predictions = self.model.predict({'image': pil_image})
-            logger.info(f"CoreML inference completed. Output keys: {predictions.keys()}")
+            # logger.info(f"CoreML inference completed. Output keys: {predictions.keys()}")
             result_image = self._draw_predictions_coreml(image, predictions, scale, pad_h, pad_w)
         except Exception as e:
             logger.warning(f"CoreML inference failed: {e}, falling back to drawing input image")
@@ -430,7 +430,7 @@ class InferenceEngine:
                 cv2.putText(result_image, label, (x1, y1 - 2),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
         
-        logger.debug(f"ONNX: Found {len(detections)} detections above confidence threshold")
+        # logger.debug(f"ONNX: Found {len(detections)} detections above confidence threshold")
         return result_image
     
     def _draw_predictions_coreml(self, image: np.ndarray, predictions: dict,
@@ -554,7 +554,7 @@ class InferenceEngine:
                     cv2.putText(result_image, label, (x1, y1 - 2),
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
             
-            logger.info(f"CoreML: Found {len(detections)} detections above confidence threshold")
+            # logger.info(f"CoreML: Found {len(detections)} detections above confidence threshold")
             
         except Exception as e:
             logger.error(f"Error processing CoreML predictions: {e}")
@@ -592,7 +592,7 @@ def main():
     parser.add_argument(
         '--config',
         type=str,
-        default='config.yaml',
+        default='configs/inf_config.yaml',
         help='Path to OmegaConf config file (default: config.yaml)'
     )
     parser.add_argument(
