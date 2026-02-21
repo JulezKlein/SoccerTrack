@@ -1,0 +1,47 @@
+# OmegaConf Configuration for Soccer Track Inference
+# Model paths with fallback logic
+
+# Model Configuration
+model:
+  # Base model directory
+  base_path: models_without_rescaling_aug/output_yolo_football/yolov8s/weights
+  
+  # Model paths in fallback order
+  model_paths:
+    - path: best.mlpackage  # CoreML format
+      format: coreml
+    - path: best.onnx       # ONNX format
+      format: onnx
+    - path: best.pt         # PyTorch format
+      format: pytorch
+  
+  # Model parameters
+  imgsz: 640                # Input image size
+  conf_threshold: 0.5     # Confidence threshold for detections
+  iou_threshold: 0.45       # IOU threshold for NMS
+
+# Inference Configuration
+inference:
+  # Input settings
+  input_type: auto           # 'image', 'video', or 'auto' (detect from file)
+  save_output: true          # Save output to file
+  output_dir: output   # Output directory for saved results
+  
+  # Display settings
+  display: true              # Display results (not applicable for video export)
+  show_conf: true            # Show confidence scores on boxes
+  line_width: 2              # Bounding box line width
+  
+  # Video settings
+  video:
+    fps: 30                   # Frames per second (for video output)
+    codec: mp4v               # Video codec
+    
+  # Image settings
+  image:
+    quality: 95               # JPEG quality (0-100)
+
+# Logging Configuration
+logging:
+  level: INFO                 # Logging level: DEBUG, INFO, WARNING, ERROR
+  verbose: false              # Verbose output

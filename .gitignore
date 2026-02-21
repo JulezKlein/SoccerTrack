@@ -213,8 +213,9 @@ data/
 output/
 RT-DETR/
 
-# Ignore all .yaml files
+# Ignore all .yaml files, but config yamls
 *.yaml
+!configs/*.yaml
 
 # Ignore yolo model weights
 *.pt
@@ -228,5 +229,8 @@ models/**/*.png
 
 models/output_yolo_football/rtdetr-l/*
 models/output_yolo_football/yolo26n/*
+
+models_without_rescaling_aug/*
+output_without_rescaling_aug/*
 
 .DS_Store
