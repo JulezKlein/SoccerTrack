@@ -7,13 +7,7 @@ from PIL import Image
 import numpy as np
 
 
-def visualize_coco_sample(
-    coco_json_path: str,
-    image_root: str,
-    image_id: int = None,
-    max_boxes: int = 50,
-    figsize=(12, 8)
-):
+def visualize_coco_sample(coco_json_path: str, image_root: str, image_id: int = None, max_boxes: int = 50, figsize=(12, 8)):
     """
     Visualize one COCO image with bounding boxes.
 
@@ -40,38 +34,22 @@ def visualize_coco_sample(
 
     img = Image.open(img_path).convert("RGB")
 
-    anns = [
-        a for a in annotations
-        if a["image_id"] == img_info["id"]
-    ][:max_boxes]
+    anns = [a for a in annotations if a["image_id"] == img_info["id"]][:max_boxes]
 
     fig, ax = plt.subplots(1, figsize=figsize)
     ax.imshow(img)
 
     for ann in anns:
         x, y, w, h = ann["bbox"]
-        rect = patches.Rectangle(
-            (x, y), w, h,
-            linewidth=2,
-            edgecolor="lime",
-            facecolor="none"
-        )
+        rect = patches.Rectangle((x, y), w, h, linewidth=2, edgecolor="lime", facecolor="none")
         ax.add_patch(rect)
 
-    ax.set_title(
-        f"{img_info['file_name']} | "
-        f"Boxes: {len(anns)}"
-    )
+    ax.set_title(f"{img_info['file_name']} | Boxes: {len(anns)}")
     ax.axis("off")
     plt.show()
 
 
-def visualize_yolo_sample(
-    image_path: str,
-    label_path: str = None,
-    figsize=(12, 8),
-    class_names: list = None
-):
+def visualize_yolo_sample(image_path: str, label_path: str = None, figsize=(12, 8), class_names: list = None):
     """
     Visualize an image with YOLO format bounding boxes.
 
@@ -122,12 +100,7 @@ def visualize_yolo_sample(
             y_tl = y_center_px - height_px / 2
 
             # Draw bounding box
-            rect = patches.Rectangle(
-                (x_tl, y_tl), width_px, height_px,
-                linewidth=2,
-                edgecolor="lime",
-                facecolor="none"
-            )
+            rect = patches.Rectangle((x_tl, y_tl), width_px, height_px, linewidth=2, edgecolor="lime", facecolor="none")
             ax.add_patch(rect)
 
             # Add class label
@@ -136,14 +109,7 @@ def visualize_yolo_sample(
             else:
                 label_text = f"Class {class_id}"
 
-            ax.text(
-                x_tl, y_tl - 5,
-                label_text,
-                color="lime",
-                fontsize=10,
-                bbox=dict(boxstyle="round,pad=0.3",
-                          facecolor="black", alpha=0.7)
-            )
+            ax.text(x_tl, y_tl - 5, label_text, color="lime", fontsize=10, bbox=dict(boxstyle="round,pad=0.3", facecolor="black", alpha=0.7))
 
             boxes_count += 1
 

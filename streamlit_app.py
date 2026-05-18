@@ -202,9 +202,7 @@ def main():
         st.error("No model files found under ./models (expected .pt, .onnx, .mlpackage).")
         return
 
-    model_options: Dict[str, Path] = {
-        model_label(path, workspace_root): path for path in discovered_models
-    }
+    model_options: Dict[str, Path] = {model_label(path, workspace_root): path for path in discovered_models}
 
     selected_label = st.selectbox("Select model", list(model_options.keys()))
     selected_model_path = model_options[selected_label]
@@ -231,9 +229,7 @@ def main():
             st.warning("No videos found under ./data.")
             input_ready = False
         else:
-            video_options: Dict[str, Path] = {
-                model_label(path, workspace_root): path for path in data_videos
-            }
+            video_options: Dict[str, Path] = {model_label(path, workspace_root): path for path in data_videos}
             selected_data_label = st.selectbox("Choose a video from data/", list(video_options.keys()))
             selected_data_video = video_options[selected_data_label]
             input_ready = True

@@ -40,7 +40,7 @@ def load_config(config_path: str):
             "requires_preparation": True,
             "training": cfg["training"],
             "augmentation": cfg["augmentation"],
-            "runtime": cfg["runtime"]
+            "runtime": cfg["runtime"],
         }
 
     elif dataset_type == "football":
@@ -53,7 +53,7 @@ def load_config(config_path: str):
             "requires_preparation": False,
             "training": cfg["training"],
             "augmentation": cfg["augmentation"],
-            "runtime": cfg["runtime"]
+            "runtime": cfg["runtime"],
         }
 
     else:
@@ -76,12 +76,10 @@ def setup_environment():
 
 
 def install_dependencies():
-    subprocess.run([sys.executable, "-m", "pip", "install",
-                   "--upgrade", "pip", "-q"], check=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip", "-q"], check=True)
     subprocess.run(
-        [sys.executable, "-m", "pip", "install",
-         "ultralytics", "pandas", "pillow", "tqdm", "opencv-python", "matplotlib", "omegaconf", "-q"],
-        check=True
+        [sys.executable, "-m", "pip", "install", "ultralytics", "pandas", "pillow", "tqdm", "opencv-python", "matplotlib", "omegaconf", "-q"],
+        check=True,
     )
 
 
@@ -96,8 +94,7 @@ def unzip_dataset():
         print("✓ Dataset exists")
         return
 
-    subprocess.run(["unzip", "-q", CONFIG["dataset_zip"],
-                   "-d", CONFIG["dataset_dir"]], check=True)
+    subprocess.run(["unzip", "-q", CONFIG["dataset_zip"], "-d", CONFIG["dataset_dir"]], check=True)
 
 
 def prepare_dataset():
@@ -108,8 +105,7 @@ def prepare_dataset():
     view_type = CONFIG["view_type"]
 
     video_root = os.path.join(CONFIG["dataset_dir"], view_type, "videos")
-    annotation_root = os.path.join(
-        CONFIG["dataset_dir"], view_type, "annotations")
+    annotation_root = os.path.join(CONFIG["dataset_dir"], view_type, "annotations")
 
     prep_dir = CONFIG["prep_dir"]
     frames = os.path.join(prep_dir, "frames")
@@ -119,8 +115,7 @@ def prepare_dataset():
         extract_frames_from_videos(video_root, frames, frame_stride=1)
 
     if not os.path.isdir(yolo):
-        convert_soccertrack_csvs_to_yolo(
-            annotation_root, frames, yolo, train_split=0.8)
+        convert_soccertrack_csvs_to_yolo(annotation_root, frames, yolo, train_split=0.8)
 
 
 # =========================
@@ -134,9 +129,11 @@ def start_training():
 
     if model_name.startswith("yolo"):
         from ultralytics import YOLO
+
         model = YOLO(f"{model_name}.pt")
     else:
         from ultralytics import RTDETR
+
         model = RTDETR(f"{model_name}.pt")
 
     device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
@@ -155,7 +152,6 @@ def start_training():
         save=True,
         augment=True,
         deterministic=False,
-
         # augmentations from YAML
         degrees=aug["rotate"],
         translate=aug["translate"],
@@ -163,9 +159,8 @@ def start_training():
         scale=aug["scale"],
         mixup=aug["mixup"],
         close_mosaic=close_mosaic,
-
         amp=False,
-        max_det=30
+        max_det=30,
     )
 
     print("Training complete!")
@@ -176,8 +171,7 @@ def start_training():
 # =========================
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config", type=str, default="configs/train_config.yaml", help="Path to YAML config")
+    parser.add_argument("--config", type=str, default="configs/train_config.yaml", help="Path to YAML config")
 
     args = parser.parse_args()
 
@@ -194,17 +188,18 @@ def main():
         prepare_dataset()
 
     start_training()
-    
+
     export = CONFIG.get("export", {})
     if export.get("export", False):
         from utils.export_yolo import run_export
+
         run_export(
             weights=os.path.join(CONFIG["output_dir"], CONFIG["training"]["model"], "weights", "best.pt"),
             img_size=CONFIG["training"]["img_size"],
             conf_thresh=export.get("conf_thresh", 0.5),
             iou_thresh=export.get("iou_thresh", 0.7),
             export_format=export.get("format", "both"),
-            data_yaml=CONFIG["yaml_path"]
+            data_yaml=CONFIG["yaml_path"],
         )
 
 

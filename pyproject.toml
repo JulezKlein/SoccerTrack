@@ -1,0 +1,27 @@
+[project]
+name = "object-detection-football"
+version = "0.1.0"
+description = "Football object detection utilities and inference scripts."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "omegaconf",
+    "ultralytics",
+    "torch",
+    "streamlit",
+    "onnxruntime",
+    "pillow",
+    "matplotlib",
+    "pandas",
+    "tqdm",
+    "coremltools",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 150

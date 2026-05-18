@@ -24,15 +24,13 @@ def downsize_images(image_dir: str, scale_factor: float = 0.5):
         return
 
     # Find all image files
-    image_files = list(image_dir.glob("**/*.jpg")) + \
-        list(image_dir.glob("**/*.jpeg")) + list(image_dir.glob("**/*.png"))
+    image_files = list(image_dir.glob("**/*.jpg")) + list(image_dir.glob("**/*.jpeg")) + list(image_dir.glob("**/*.png"))
 
     if not image_files:
         print(f"No images found in {image_dir}")
         return
 
-    print(
-        f"Downsizing {len(image_files)} images to {scale_factor*100:.0f}% of original size...")
+    print(f"Downsizing {len(image_files)} images to {scale_factor * 100:.0f}% of original size...")
 
     for img_path in tqdm(image_files, desc="Downsizing images"):
         try:
@@ -44,8 +42,7 @@ def downsize_images(image_dir: str, scale_factor: float = 0.5):
             new_height = int(img.height * scale_factor)
 
             # Resize using high-quality resampling
-            img_resized = img.resize(
-                (new_width, new_height), Image.Resampling.LANCZOS)
+            img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
             # Overwrite original
             img_resized.save(img_path, quality=95)
@@ -57,10 +54,10 @@ def downsize_images(image_dir: str, scale_factor: float = 0.5):
 
 
 def extract_frames_from_videos(
-        video_root: str = "/content/soccertrack/top_view/videos",
-        output_root: str = "/content/data_prep/soccertrack_frames",
-        img_ext: str = ".jpg",
-        frame_stride: int = 20,
+    video_root: str = "/content/soccertrack/top_view/videos",
+    output_root: str = "/content/data_prep/soccertrack_frames",
+    img_ext: str = ".jpg",
+    frame_stride: int = 20,
 ):
     """
     Extract frames from all MP4 videos in video_root.
@@ -123,8 +120,7 @@ def convert_soccertrack_csvs_to_coco(
     img_id = 1
     ann_id = 1
 
-    csv_files = sorted(f for f in os.listdir(
-        annotation_root) if f.endswith(".csv"))
+    csv_files = sorted(f for f in os.listdir(annotation_root) if f.endswith(".csv"))
     assert csv_files, f"No CSV files found in {annotation_root}"
 
     split_idx = int(len(csv_files) * train_split)
@@ -145,10 +141,7 @@ def convert_soccertrack_csvs_to_coco(
             continue
 
         # Cache image list (ordered)
-        img_files = sorted(
-            f for f in os.listdir(img_dir)
-            if f.lower().endswith((".jpg", ".png"))
-        )
+        img_files = sorted(f for f in os.listdir(img_dir) if f.lower().endswith((".jpg", ".png")))
 
         if not img_files:
             print(f"No images in {img_dir} — skipping")
@@ -210,7 +203,6 @@ def convert_soccertrack_csvs_to_coco(
         # Iterate frames
         # ---------------------------------------------------------
         for _, row in tqdm(data.iterrows(), total=len(data), desc=f"COCO {video_name}"):
-
             frame_num = int(row["frame"])
 
             if frame_stride > 1 and frame_num % frame_stride != 0:
@@ -231,19 +223,20 @@ def convert_soccertrack_csvs_to_coco(
 
             w_img, h_img = Image.open(frame_img).size
 
-            images.append({
-                "id": img_id,
-                "file_name": coco_img_name,
-                "width": w_img,
-                "height": h_img,
-                "video_name": video_name,
-            })
+            images.append(
+                {
+                    "id": img_id,
+                    "file_name": coco_img_name,
+                    "width": w_img,
+                    "height": h_img,
+                    "video_name": video_name,
+                }
+            )
 
             # -----------------------------------------------------
             # Annotations
             # -----------------------------------------------------
             for (team_id, pid), cols in players.items():
-
                 if len(cols) != 4:
                     continue
 
@@ -260,14 +253,16 @@ def convert_soccertrack_csvs_to_coco(
                 if w <= 1 or h <= 1:
                     continue
 
-                annotations.append({
-                    "id": ann_id,
-                    "image_id": img_id,
-                    "category_id": 1,
-                    "bbox": [x, y, w, h],
-                    "area": w * h,
-                    "iscrowd": 0,
-                })
+                annotations.append(
+                    {
+                        "id": ann_id,
+                        "image_id": img_id,
+                        "category_id": 1,
+                        "bbox": [x, y, w, h],
+                        "area": w * h,
+                        "iscrowd": 0,
+                    }
+                )
                 ann_id += 1
 
             img_id += 1
@@ -321,8 +316,7 @@ def convert_soccertrack_csvs_to_yolo(
     os.makedirs(f"{output_root}/labels/train", exist_ok=True)
     os.makedirs(f"{output_root}/labels/val", exist_ok=True)
 
-    csv_files = sorted(f for f in os.listdir(
-        annotation_root) if f.endswith(".csv"))
+    csv_files = sorted(f for f in os.listdir(annotation_root) if f.endswith(".csv"))
     assert csv_files, f"No CSV files found in {annotation_root}"
 
     split_idx = int(len(csv_files) * train_split)
@@ -346,10 +340,7 @@ def convert_soccertrack_csvs_to_yolo(
             continue
 
         # Cache image list (ordered)
-        img_files = sorted(
-            f for f in os.listdir(img_dir)
-            if f.lower().endswith((".jpg", ".png"))
-        )
+        img_files = sorted(f for f in os.listdir(img_dir) if f.lower().endswith((".jpg", ".png")))
 
         if not img_files:
             print(f"No images in {img_dir} — skipping")
@@ -411,7 +402,6 @@ def convert_soccertrack_csvs_to_yolo(
         # Iterate frames
         # ---------------------------------------------------------
         for _, row in tqdm(data.iterrows(), total=len(data), desc=f"YOLO {video_name}"):
-
             frame_num = int(row["frame"])
 
             if frame_stride > 1 and frame_num % frame_stride != 0:
@@ -438,7 +428,6 @@ def convert_soccertrack_csvs_to_yolo(
             label_lines = []
 
             for (team_id, pid), cols in players.items():
-
                 if len(cols) != 4:
                     continue
 
@@ -462,15 +451,13 @@ def convert_soccertrack_csvs_to_yolo(
                 height_norm = h / h_img
 
                 # YOLO class id 0 for all players
-                label_lines.append(
-                    f"0 {x_center:.6f} {y_center:.6f} {width_norm:.6f} {height_norm:.6f}")
+                label_lines.append(f"0 {x_center:.6f} {y_center:.6f} {width_norm:.6f} {height_norm:.6f}")
                 total_annotations += 1
 
             # ---------------------------------------------------------
             # Write label file
             # ---------------------------------------------------------
-            label_file = os.path.join(
-                output_root, "labels", split, f"{os.path.splitext(yolo_img_name)[0]}.txt")
+            label_file = os.path.join(output_root, "labels", split, f"{os.path.splitext(yolo_img_name)[0]}.txt")
             with open(label_file, "w") as lf:
                 lf.write("\n".join(label_lines))
 
@@ -520,25 +507,25 @@ def coco_to_yolo_labels(coco_json_path: str, images_dir: str, labels_out_dir: st
         coco = json.load(f)
 
     # Build category id -> name and index map
-    cats = {c['id']: c['name'] for c in coco.get('categories', [])}
+    cats = {c["id"]: c["name"] for c in coco.get("categories", [])}
     if class_mapping is None:
         # default: map sorted category ids to 0..N-1
         sorted_ids = sorted(cats.keys())
         class_mapping = {cid: i for i, cid in enumerate(sorted_ids)}
 
     # Map image id -> (file_name, width, height)
-    img_info = {img['id']: img for img in coco.get('images', [])}
+    img_info = {img["id"]: img for img in coco.get("images", [])}
 
     # Group annotations by image_id
     anns_by_image = {}
-    for ann in coco.get('annotations', []):
-        img_id = ann['image_id']
+    for ann in coco.get("annotations", []):
+        img_id = ann["image_id"]
         anns_by_image.setdefault(img_id, []).append(ann)
 
     for img_id, info in img_info.items():
-        filename = info.get('file_name')
-        width = info.get('width')
-        height = info.get('height')
+        filename = info.get("file_name")
+        width = info.get("width")
+        height = info.get("height")
         if not filename:
             continue
 
@@ -551,8 +538,8 @@ def coco_to_yolo_labels(coco_json_path: str, images_dir: str, labels_out_dir: st
 
         label_lines = []
         for ann in anns_by_image.get(img_id, []):
-            bbox = ann.get('bbox')  # [x,y,w,h] absolute
-            cat_id = ann.get('category_id')
+            bbox = ann.get("bbox")  # [x,y,w,h] absolute
+            cat_id = ann.get("category_id")
             if bbox is None or cat_id is None:
                 continue
 
@@ -573,8 +560,7 @@ def coco_to_yolo_labels(coco_json_path: str, images_dir: str, labels_out_dir: st
         with open(out_label, "w") as lf:
             lf.write("\n".join(label_lines))
 
-    print(
-        f"Converted COCO -> YOLO labels: {coco_json_path} -> {labels_out_dir}")
+    print(f"Converted COCO -> YOLO labels: {coco_json_path} -> {labels_out_dir}")
 
 
 def build_yolo_annotations(prep_root: str = "./data/soccertrack_prep_top_view", coco_subdir: str = "coco", overwrite: bool = False):
@@ -611,14 +597,12 @@ def build_yolo_annotations(prep_root: str = "./data/soccertrack_prep_top_view", 
 
     # Convert both splits
     if ann_train.exists():
-        coco_to_yolo_labels(str(ann_train), str(images_train),
-                            str(labels_train), overwrite=overwrite)
+        coco_to_yolo_labels(str(ann_train), str(images_train), str(labels_train), overwrite=overwrite)
     else:
         print(f"COCO train json missing: {ann_train}")
 
     if ann_val.exists():
-        coco_to_yolo_labels(str(ann_val), str(images_val),
-                            str(labels_val), overwrite=overwrite)
+        coco_to_yolo_labels(str(ann_val), str(images_val), str(labels_val), overwrite=overwrite)
     else:
         print(f"COCO val json missing: {ann_val}")
 
@@ -627,14 +611,14 @@ def build_yolo_annotations(prep_root: str = "./data/soccertrack_prep_top_view", 
 
     # Build names mapping
     if ann_train.exists():
-        cats = json.load(open(ann_train))['categories']
+        cats = json.load(open(ann_train))["categories"]
     elif ann_val.exists():
-        cats = json.load(open(ann_val))['categories']
+        cats = json.load(open(ann_val))["categories"]
     else:
         cats = [{"id": 1, "name": "player"}]
 
     # Map sorted category ids to 0..N-1
-    sorted_cats = sorted(cats, key=lambda c: c['id'])
+    sorted_cats = sorted(cats, key=lambda c: c["id"])
     num_classes = len(sorted_cats)
 
     # Build yaml content
@@ -697,12 +681,10 @@ def validate_yolo_dataset(labels_dir: str, images_dir: str = None):
                 parts = line.strip().split()
 
                 if len(parts) != 5:
-                    issues.append(
-                        f"{label_file.name}:{line_num} - Invalid format (expected 5 values, got {len(parts)})")
+                    issues.append(f"{label_file.name}:{line_num} - Invalid format (expected 5 values, got {len(parts)})")
                     continue
 
                 try:
-                    class_id = int(parts[0])
                     x_center = float(parts[1])
                     y_center = float(parts[2])
                     width = float(parts[3])
@@ -711,13 +693,13 @@ def validate_yolo_dataset(labels_dir: str, images_dir: str = None):
                     # Check if coordinates are in [0, 1] range
                     if not (0 <= x_center <= 1 and 0 <= y_center <= 1 and 0 <= width <= 1 and 0 <= height <= 1):
                         issues.append(
-                            f"{label_file.name}:{line_num} - Coordinates out of bounds: x_center={x_center}, y_center={y_center}, width={width}, height={height}")
+                            f"{label_file.name}:{line_num} - Coordinates out of bounds: x_center={x_center}, y_center={y_center}, width={width}, height={height}"
+                        )
                     else:
                         valid_count += 1
 
                 except ValueError as e:
-                    issues.append(
-                        f"{label_file.name}:{line_num} - Invalid number format: {e}")
+                    issues.append(f"{label_file.name}:{line_num} - Invalid number format: {e}")
 
         except Exception as e:
             issues.append(f"{label_file.name} - Error reading file: {e}")
@@ -730,13 +712,13 @@ def validate_yolo_dataset(labels_dir: str, images_dir: str = None):
         if len(issues) > 20:
             print(f"  ... and {len(issues) - 20} more issues")
     else:
-        print(
-            f"Dataset validation passed: {valid_count} valid annotations in {labels_dir}")
+        print(f"Dataset validation passed: {valid_count} valid annotations in {labels_dir}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Example: convert SoccerTrack CSVs to COCO format
     convert_soccertrack_csvs_to_coco(
         annotation_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
         image_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
-        output_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack")
+        output_root=r"C:\Users\julia\Desktop\ML Material\SoccerTrack",
+    )

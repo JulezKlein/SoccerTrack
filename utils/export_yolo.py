@@ -11,8 +11,8 @@ import time
 # path to your trained YOLO weights
 WEIGHTS = "models/output_combined_dataset/yolov8s/weights/best.pt"
 IMG_SIZE = 640
-EXPORT_FP16 = True        # set False if you want FP32
-DISABLE_NMS = False     # set True to disable NMS in exported model
+EXPORT_FP16 = True  # set False if you want FP32
+DISABLE_NMS = False  # set True to disable NMS in exported model
 EXPORT_FORMAT = "both"  # ONNX or Core ML supported in this script
 DATA_YAML = "data/combined_dataset/data.yaml"  # path to your data.yaml for class names, etc.
 
@@ -32,8 +32,8 @@ def export_coreml(weights, img_size, conf_thresh, iou_thresh, data_yaml=DATA_YAM
         nms=not DISABLE_NMS,
         half=EXPORT_FP16,
         conf=conf_thresh,  # default confidence threshold baked into model for Core ML export
-        iou=iou_thresh,   # default IoU threshold baked into model for Core ML export
-        data=data_yaml
+        iou=iou_thresh,  # default IoU threshold baked into model for Core ML export
+        data=data_yaml,
     )
 
     print("Export finished")
@@ -94,9 +94,9 @@ def export_onnx(weights, img_size, conf_thresh, iou_thresh, data_yaml=DATA_YAML)
         # export with postprocessing (NMS) for easier ONNX runtime usage
         end2end=True,
         conf=conf_thresh,  # default confidence threshold baked into model for ONNX export
-        iou=iou_thresh,   # default IoU threshold baked into model for ONNX export
+        iou=iou_thresh,  # default IoU threshold baked into model for ONNX export
         half=EXPORT_FP16,
-        data=data_yaml
+        data=data_yaml,
     )
 
     print("ONNX export finished")
@@ -145,8 +145,7 @@ def run_export(
     export_format=EXPORT_FORMAT,
     data_yaml=DATA_YAML,
 ):
-    fmt = export_format.strip().lower() if isinstance(
-        export_format, str) else "coreml"
+    fmt = export_format.strip().lower() if isinstance(export_format, str) else "coreml"
     if fmt == "coreml":
         export_coreml(weights, img_size, conf_thresh, iou_thresh, data_yaml=data_yaml)
         quick_test_coreml(weights, img_size)
@@ -159,8 +158,7 @@ def run_export(
         export_onnx(weights, img_size, conf_thresh, iou_thresh, data_yaml=data_yaml)
         quick_test_onnx(weights, img_size)
     else:
-        print(
-            f"Unsupported EXPORT_FORMAT: {export_format}. Choose 'coreml', 'onnx', or 'both'.")
+        print(f"Unsupported EXPORT_FORMAT: {export_format}. Choose 'coreml', 'onnx', or 'both'.")
 
 
 if __name__ == "__main__":

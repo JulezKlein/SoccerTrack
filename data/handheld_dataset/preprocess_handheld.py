@@ -25,7 +25,6 @@ Usage: run from repository root or directly execute this file.
 from pathlib import Path
 import shutil
 import csv
-import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 HANDHELD_ROOT = ROOT / "data" / "handheld_dataset"
@@ -51,7 +50,7 @@ def read_split(split_file: Path):
 def load_labels(labels_file: Path):
     if not labels_file.exists():
         return []
-    return [l.strip() for l in labels_file.read_text().splitlines()]
+    return [label.strip() for label in labels_file.read_text().splitlines()]
 
 
 def parse_gt(gt_file: Path):
@@ -137,8 +136,7 @@ def process_dataset(dataset_name: str, split_subdir: str):
 
     dest_base = COMBINED_ROOT / split_subdir
     ensure_dirs(dest_base)
-    print(
-        f"Processing dataset {dataset_name} with {len(gt)} annotated images and {len(labels)} labels and put it into {split_subdir} split.")
+    print(f"Processing dataset {dataset_name} with {len(gt)} annotated images and {len(labels)} labels and put it into {split_subdir} split.")
     for img_path in sorted(img_src_dir.iterdir()):
         if not img_path.is_file():
             continue
@@ -183,13 +181,10 @@ def process_dataset(dataset_name: str, split_subdir: str):
             def clamp(v):
                 return max(0.0, min(1.0, float(v)))
 
-            label_lines.append(
-                f"{cls} {clamp(x_center):.6f} {clamp(y_center):.6f} {clamp(w_n):.6f} {clamp(h_n):.6f}")
+            label_lines.append(f"{cls} {clamp(x_center):.6f} {clamp(y_center):.6f} {clamp(w_n):.6f} {clamp(h_n):.6f}")
 
-        label_file = dest_base / "labels" / \
-            (dest_img_name.rsplit('.', 1)[0] + ".txt")
-        label_file.write_text("\n".join(label_lines) +
-                              ("\n" if label_lines else ""))
+        label_file = dest_base / "labels" / (dest_img_name.rsplit(".", 1)[0] + ".txt")
+        label_file.write_text("\n".join(label_lines) + ("\n" if label_lines else ""))
 
 
 def main():
@@ -202,8 +197,7 @@ def main():
     (COMBINED_ROOT / "train").mkdir(parents=True, exist_ok=True)
     (COMBINED_ROOT / "valid").mkdir(parents=True, exist_ok=True)
 
-    print(
-        f"Processing {len(train_sets)} train datasets and {len(val_sets)} val datasets")
+    print(f"Processing {len(train_sets)} train datasets and {len(val_sets)} val datasets")
 
     for d in train_sets:
         process_dataset(d, "train")
